@@ -8,10 +8,17 @@ public class SparseMatrix {
     private int[] rowPointer;
     private int[] columnIndex;
 
+    private int columns;
+    private int rows;
+    private int elements;
 
-    private SparseMatrix(int rows, int columns, int elements) {
+
+    public SparseMatrix(int rows, int columns, int elements) {
         columnIndex = new int[elements];
         rowPointer = new int[rows + 1];
+        this.columns = columns;
+        this.rows = rows;
+        this.elements = elements;
     }
 
 
@@ -28,6 +35,7 @@ public class SparseMatrix {
         // so we can operate on the basis of lines
         int lineIndex = 0;
         SparseMatrix sm;
+        System.out.println("got here");
         try (BufferedReader br = new BufferedReader(fr)) {
 
             // get past all the comments
@@ -100,6 +108,42 @@ public class SparseMatrix {
      */
     public SparseMatrix transpose(){
         //todo
-        return this;
+        SparseMatrix sm = new SparseMatrix(this.columns, this.rows, this.elements);
+        int[][] expandedStorage = new int[this.elements][2];
+        // convert to standard sparse matrix storage
+        int ind=0;
+        for (int row=0; row<this.rows; row++) {
+            System.out.println("\nOn row " + row);
+            for (; ind<rowPointer[row + 1]; ind++) {
+                System.out.println("Found column " + columnIndex[ind]);
+                expandedStorage[ind] = new int[]{row, columnIndex[ind]};
+            }
+        }
+
+        // switch rows and columns
+        for (int[] data : expandedStorage) {
+            // XOR swapping
+            data[0] ^= data[1];
+            data[1] ^= data[0];
+            data[0] ^= data[1];
+        }
+        // convert back to crs
+        Arrays.sort(expandedStorage, Comparator.comparing(x -> x[0]));
+
+        // add to matrix
+        int i = 0;
+        int j = 0;
+        for (int[] element : expandedStorage){
+            System.out.printf("{%d, %d}%n", element[0], element[1]);
+            sm.columnIndex[i] = element[1];
+            // go to next row if row number is bigger than the last
+            // this for loop only executes if element[0] > j
+            for (; j<element[0]; j++)
+                sm.rowPointer[j] = i;
+            i++;
+        }
+        sm.rowPointer[sm.rows] = sm.elements;
+
+        return sm;
     }
 }
