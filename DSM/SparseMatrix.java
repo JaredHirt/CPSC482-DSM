@@ -42,7 +42,6 @@ public class SparseMatrix {
         // so we can operate on the basis of lines
         int lineIndex = 0;
         SparseMatrix sm;
-        System.out.println("got here");
         try (BufferedReader br = new BufferedReader(fr)) {
 
             // get past all the comments
@@ -52,10 +51,8 @@ public class SparseMatrix {
             // skip all commented lines
             while (flag == false){
                 line = br.readLine().trim();
-                System.out.println("on: " + line);
                 if (!line.matches(".*%.*")) flag = true;
             }
-            System.out.println("got here");
 
             // should be on size line now
             // read size and elements
@@ -64,8 +61,6 @@ public class SparseMatrix {
             int col = Integer.parseInt(data[1]);
             int ele = Integer.parseInt(data[2]);
             sm = new SparseMatrix(row, col, ele);
-
-            System.out.println("got here");
 
             // start reading elements in
             int[][] allElements = new int[ele][2];
@@ -80,7 +75,6 @@ public class SparseMatrix {
                     Integer.parseInt(data[0]), 
                     Integer.parseInt(data[1])
                 };
-                System.out.printf("{%d, %d}%n", Integer.parseInt(data[0]), Integer.parseInt(data[1]));
                 line = br.readLine();
                 if (line != null) line = line.trim();
             }
@@ -92,7 +86,6 @@ public class SparseMatrix {
             int i = 0;
             int j = 0;
             for (int[] element : allElements){
-                System.out.printf("{%d, %d}%n", element[0], element[1]);
                 // subtract one from both coordinates so it's 0-indexed internally
                 sm.columnIndex[i] = element[1] - 1;
                 // go to next row if row number is bigger than the last
@@ -156,7 +149,6 @@ public class SparseMatrix {
         int i = 0;
         int j = 0;
         for (int[] element : transposedStorage){
-            System.out.printf("{%d, %d}%n", element[0], element[1]);
             // subtract one from both coordinates so it's 0-indexed internally
             sm.columnIndex[i] = element[1] - 1;
             // go to next row if row number is bigger than the last
@@ -168,5 +160,37 @@ public class SparseMatrix {
         sm.rowPointer[sm.rows] = transposedStorage.length;
 
         return sm;
+    }
+
+    /**
+     * Optimizes the sparse matrix by reducing the number of feedback loops and then the distance of the feedback loops from the main diagonal.
+     * This algorithm does not find a perfect solution but instead finds a local minimum in a reasonable amount of time as the perfect solution is NP hard.
+     */
+    public void optimizeDSM(){
+        reduceFeedback();
+        minimizeDistanceFromDiagonal();
+    }
+
+    /**
+     * Reduces the number of feedback loops in the matrix. This is the global minimum.
+     */
+    public void reduceFeedback(){
+        //Get the transpose of the matrix
+        //Perform DFS on the original matrix putting the equivalent nodes of the transposed matrix into a stack
+        //Perform DFS on the transposed matrix, popping nodes from the stack and notating SCCs
+        //Put the SCCs into order and rearange the original matrix accordingly
+        //This will result with the DSM being optimized for the number of feed back loops
+    }
+
+    /**
+     * Reduces the distance of feedback loops from the main diagonal. This finds a local minimum as the perfect solution is NP hard.
+     */
+    public void minimizeDistanceFromDiagonal(){
+        //Work now needs to be performed on reducing the distance of feedback loops from the main diagonal. 
+        //The perfect solution for this is exponential, but we will perform an approximate solution by using Neural sort.
+        //Neural sort is a differentiable sorting algorithm that can be used to optimize the order of elements in a list.
+        //This is done by relaxing the constraint of elements being in a specific order and instead allowing them to be in a continuous space.
+        //This allows us to use gradient descent to optimize the order of elements in the list.
+        //This is done relative to a loss function that we define. This will be (large number * num_feedback_loops) + distance_from_diagonal
     }
 }
