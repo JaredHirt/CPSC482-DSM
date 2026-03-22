@@ -246,20 +246,13 @@ public class SparseMatrix {
         int[] newColumnIndex = new int[this.elements];
         int[] newRowPointer = new int[this.rows + 1];
 
-        //Going through all the nodes in the new order and setting up newRowPointer
-
-        for(int i = 0; i < nodeOrder.size(); i++) {
+        // Build CSR row starts for the reordered node sequence.
+        newRowPointer[0] = 0;
+        for (int i = 0; i < nodeOrder.size(); i++) {
             Node node = nodeOrder.get(i);
-            //Setting new Row Pointer
-            if(i == 0) {
-                //First row always starts at 0
-                newRowPointer[i] = 0;
-            } else {
-            //Adding the number of elements in the row to the previous row pointer to get the new row pointer
-            newRowPointer[i] = newRowPointer[i-1] + (rowPointer[node.index + 1] - rowPointer[node.index]);
-            }
+            int rowLength = rowPointer[node.index + 1] - rowPointer[node.index];
+            newRowPointer[i + 1] = newRowPointer[i] + rowLength;
         }
-        newRowPointer[nodeOrder.size()] = this.elements; //Last row pointer is always the number of elements
         //Now we have the new row pointers, we can set up the new column index by going through each node in the new order and adding its column index to the new column index array.
         for(int i = 0; i < nodeOrder.size(); i++) {
             Node node = nodeOrder.get(i);
