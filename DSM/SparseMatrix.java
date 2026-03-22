@@ -3,7 +3,14 @@
  * This class stores a binary Sparse matrix (values are either 0 or 1) in CRS format.
  * 
  */
-// package DSM;
+package DSM;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.util.Arrays;
+import java.util.Comparator;
+
 public class SparseMatrix {
     private int[] rowPointer;
     private int[] columnIndex;
