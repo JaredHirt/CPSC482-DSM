@@ -113,9 +113,7 @@ public class SparseMatrix {
         // convert to standard sparse matrix storage
         int ind=0;
         for (int row=0; row<this.rows; row++) {
-            System.out.println("\nOn row " + row);
             for (; ind<rowPointer[row + 1]; ind++) {
-                System.out.println("Found column " + columnIndex[ind]);
                 expandedStorage[ind] = new int[]{row, columnIndex[ind]};
             }
         }
