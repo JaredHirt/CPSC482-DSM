@@ -121,28 +121,44 @@ public class SparseMatrix {
         }
 
         // switch rows and columns
-        for (int[] data : expandedStorage) {
-            // XOR swapping
-            data[0] ^= data[1];
-            data[1] ^= data[0];
-            data[0] ^= data[1];
-        }
-        // convert back to crs
-        Arrays.sort(expandedStorage, Comparator.comparing(x -> x[0]));
+        // fast transpose
 
+        // counting array
+        // count the terms
+        int[] colCount = new int[this.columns];
+        for (int i : columnIndex) {
+            colCount[i]++;
+        }
+        // calculate column starts
+        int[] startPos = new int[this.columns];
+        for (int i=1; i<this.columns; i++) {
+            startPos[i] = startPos[i-1]+colCount[i-1];
+        }
+        // transpose elements
+        int[][] transposedStorage = new int[this.elements][2];
+        for (int i=0; i<this.columnIndex.length; i++) {
+            int col = expandedStorage[i][1];
+            int pos = startPos[col];
+            transposedStorage[pos] = new int[]{expandedStorage[i][1] + 1, expandedStorage[i][0] + 1};
+            startPos[col]++;
+        }
+
+
+        // convert back to crs
         // add to matrix
         int i = 0;
         int j = 0;
-        for (int[] element : expandedStorage){
+        for (int[] element : transposedStorage){
             System.out.printf("{%d, %d}%n", element[0], element[1]);
-            sm.columnIndex[i] = element[1];
+            // subtract one from both coordinates so it's 0-indexed internally
+            sm.columnIndex[i] = element[1] - 1;
             // go to next row if row number is bigger than the last
             // this for loop only executes if element[0] > j
             for (; j<element[0]; j++)
                 sm.rowPointer[j] = i;
             i++;
         }
-        sm.rowPointer[sm.rows] = sm.elements;
+        sm.rowPointer[sm.rows] = transposedStorage.length;
 
         return sm;
     }
