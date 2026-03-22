@@ -9,13 +9,10 @@ package DSM;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Stack;
-import java.util.Queue;
-import java.util.LinkedList;
 
 public class SparseMatrix {
     private int[] rowPointer;
@@ -242,6 +239,8 @@ public class SparseMatrix {
         }
 
         //This will result with the DSM being optimized for the number of feed back loops
+        this.columnIndex = newColumnIndex;
+        this.rowPointer = newRowPointer;
     }
 
     /**
