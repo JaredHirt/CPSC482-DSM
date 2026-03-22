@@ -181,4 +181,124 @@ Important implementation issue exposed:
 If you want, next step is I can fix the reduceFeedback reordering logic so this suite passes.
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Generating more test cases
+Model used: Github Copilot using GPT-5.3-Codex • 0.9x
+Prompt: Generate more test cases for me please. Make me around 50 or so to ensure there are no underlying issues. Feel free to make some larger test cases, I don't mind running the program for a while.
+Output:
+-------------------------------------------------------------------------------------------------------------------------------------
+I’ll generate a large batch of additional `.mtx` test matrices (about 50) and wire the test runner to automatically include them so you can stress test with one command.
 
+Read [](file:///c%3A/Users/jared/Projects/CPSC%20482/CPSC482-DSM/DSM/Test.java)
+
+Read [](file:///c%3A/Users/jared/Projects/CPSC%20482/CPSC482-DSM/TestMatrices)
+
+I found a scalability issue in the current tester (exact minimization is factorial), so I’m generating 50 structured cases with sizes 4–8 that are much broader but still feasible to verify exactly.
+
+Ran terminal command: $root = 'TestMatrices';
+$patterns = @('Empty','Chain','Cycle','StarOut','StarIn','BiChain','TwoSCCBridge','SelfLoops','UpperTriDense','LowerTriDense');
+foreach ($n in 4..8) {
+  foreach ($p in $patterns) {
+    $lines = New-Object System.Collections.Generic.List[string]
+    $edges = New-Object System.Collections.Generic.List[string]
+
+    switch ($p) {
+      'Empty' {
+      }
+      'Chain' {
+        for ($i=1; $i -lt $n; $i++) { $edges.Add("$i " + ($i+1)) }
+      }
+      'Cycle' {
+        for ($i=1; $i -lt $n; $i++) { $edges.Add("$i " + ($i+1)) }
+        $edges.Add("$n 1")
+      }
+      'StarOut' {
+        for ($i=2; $i -le $n; $i++) { $edges.Add("1 $i") }
+      }
+      'StarIn' {
+        for ($i=2; $i -le $n; $i++) { $edges.Add("$i 1") }
+      }
+      'BiChain' {
+        for ($i=1; $i -lt $n; $i++) { $edges.Add("$i " + ($i+1)); $edges.Add(($i+1).ToString() + " $i") }
+      }
+      'TwoSCCBridge' {
+        $k = [Math]::Floor($n / 2)
+        if ($k -lt 2) { $k = 2 }
+        # First SCC cycle: 1..k
+        for ($i=1; $i -lt $k; $i++) { $edges.Add("$i " + ($i+1)) }
+        $edges.Add("$k 1")
+        # Second SCC cycle: (k+1)..n
+        for ($i=$k+1; $i -lt $n; $i++) { $edges.Add("$i " + ($i+1)) }
+        $edges.Add("$n " + ($k+1))
+        # Bridge from SCC1 to SCC2
+        $edges.Add("$k " + ($k+1))
+      }
+      'SelfLoops' {
+        for ($i=1; $i -le $n; $i++) { $edges.Add("$i $i") }
+      }
+      'UpperTriDense' {
+        for ($i=1; $i -le $n; $i++) {
+          for ($j=$i+1; $j -le $n; $j++) { $edges.Add("$i $j") }
+        }
+      }
+      'LowerTriDense' {
+        for ($i=1; $i -le $n; $i++) {
+          for ($j=1; $j -lt $i; $j++) { $edges.Add("$i $j") }
+        }
+      }
+    }
+
+    $lines.Add("$n $n " + $edges.Count)
+    foreach ($e in $edges) { $lines.Add($e) }
+
+    $file = Join-Path $root ("Gen_{0}_{1}.mtx" -f $p, $n)
+    Set-Content -Path $file -Value $lines -NoNewline:$false
+  }
+}
+Write-Output 'Generated 50 matrix files under TestMatrices.'
+
+Ran terminal command: Get-ChildItem TestMatrices\Gen_*.mtx | Measure-Object | Select-Object -ExpandProperty Count
+
+I confirmed all 50 files were created; next I’m updating the test runner to auto-include these generated matrices with clear per-test descriptions.
+
+Generating patch (155 lines) in [](file:///c%3A/Users/jared/Projects/CPSC%20482/CPSC482-DSM/DSM/Test.java)
+
+
+```
+
+```
+I’ve wired the runner to include all generated cases; I’ll now compile and run the full suite so you can confirm the expanded test corpus works end-to-end.
+
+Ran terminal command: javac DSM/*.java; java DSM.Test
+
+Read [](file:///c%3A/Users/jared/AppData/Roaming/Code/User/workspaceStorage/0f845c85e2dd3a757b6e368a56d523d9/GitHub.copilot-chat/chat-session-resources/aa6d923b-12b8-412b-a1e6-b5fa3b61f358/call_sNPq7vCJpR701bkIZ0Pmn4m4__vscode-1774158730947/content.txt#1-1), lines 1 to 260
+
+Read [](file:///c%3A/Users/jared/AppData/Roaming/Code/User/workspaceStorage/0f845c85e2dd3a757b6e368a56d523d9/GitHub.copilot-chat/chat-session-resources/aa6d923b-12b8-412b-a1e6-b5fa3b61f358/call_sNPq7vCJpR701bkIZ0Pmn4m4__vscode-1774158730947/content.txt#261-261), lines 261 to 342
+
+Done. I generated around 50 additional test matrices and integrated them into the test runner.
+
+What I changed:
+1. Added 50 generated matrix files in TestMatrices, using this naming scheme:
+- Gen_Empty_4.mtx through Gen_Empty_8.mtx
+- Gen_Chain_4.mtx through Gen_Chain_8.mtx
+- Gen_Cycle_4.mtx through Gen_Cycle_8.mtx
+- Gen_StarOut_4.mtx through Gen_StarOut_8.mtx
+- Gen_StarIn_4.mtx through Gen_StarIn_8.mtx
+- Gen_BiChain_4.mtx through Gen_BiChain_8.mtx
+- Gen_TwoSCCBridge_4.mtx through Gen_TwoSCCBridge_8.mtx
+- Gen_SelfLoops_4.mtx through Gen_SelfLoops_8.mtx
+- Gen_UpperTriDense_4.mtx through Gen_UpperTriDense_8.mtx
+- Gen_LowerTriDense_4.mtx through [TestMatrices/Gen_LowerTriDense_8.mtx)
+
+2. Updated Test.java to:
+- Keep your original base tests.
+- Automatically add all 50 generated tests (sizes 4 to 8).
+- Print a clear description before each generated test explaining exactly what is being tested.
+
+Validation:
+- I compiled and ran the full suite.
+- Final result: 56 passed, 0 failed, 56 total.
+
+So you now have a much broader stress suite covering empty graphs, DAGs, cycles, SCC-bridge structures, dense triangular matrices, stars, self-loops, and bidirectional chains, all checked for:
+1. Isomorphism preservation after optimize.
+2. Global minimum feedback-loop count (exact brute force on these sizes).
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

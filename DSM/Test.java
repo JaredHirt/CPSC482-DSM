@@ -1,6 +1,8 @@
 package DSM;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 class Test {
 
@@ -17,38 +19,9 @@ class Test {
     }
 
     public static void main(String[] args) {
-        TestCase[] tests = new TestCase[] {
-            new TestCase(
-                "Empty Matrix",
-                "TestMatrices/Empty4.mtx",
-                "Edge case with zero edges. Verifies CSR read/store with no elements, isomorphism after optimize, and global minimum feedback loops of 0."
-            ),
-            new TestCase(
-                "Simple DAG Chain",
-                "TestMatrices/Chain4.mtx",
-                "Acyclic graph (1->2->3->4). Verifies optimization keeps graph isomorphic and reaches global minimum feedback loops (0 for DAG)."
-            ),
-            new TestCase(
-                "Single SCC Cycle",
-                "TestMatrices/Cycle3.mtx",
-                "Single strongly connected cycle of size 3. Verifies SCC handling and that optimized order attains globally minimal unavoidable feedback loops."
-            ),
-            new TestCase(
-                "Two SCCs With Bridge",
-                "TestMatrices/TwoSCC4.mtx",
-                "Two separate SCCs linked by one cross edge. Verifies SCC condensation ordering and global minimum feedback loops across all permutations."
-            ),
-            new TestCase(
-                "Trailing Empty Rows",
-                "TestMatrices/SparseTrailingRows6.mtx",
-                "Matrix with edges only in early rows and empty rows at the end. Verifies CSR rowPointer correctness, isomorphism, and optimal feedback loop count."
-            ),
-            new TestCase(
-                "Self Loops And Sparse Edges",
-                "TestMatrices/SelfLoops5.mtx",
-                "Includes diagonal self-loops and sparse forward edges. Verifies that optimization preserves structure and still minimizes feedback loops globally."
-            )
-        };
+        List<TestCase> tests = new ArrayList<TestCase>();
+        addBaseTests(tests);
+        addGeneratedTests(tests);
 
         int passed = 0;
         int failed = 0;
@@ -68,10 +41,103 @@ class Test {
         }
 
         System.out.println();
-        System.out.println("Summary: " + passed + " passed, " + failed + " failed, " + tests.length + " total");
+        System.out.println("Summary: " + passed + " passed, " + failed + " failed, " + tests.size() + " total");
         if (failed > 0) {
             throw new AssertionError("One or more tests failed.");
         }
+    }
+
+    private static void addBaseTests(List<TestCase> tests) {
+        tests.add(new TestCase(
+            "Empty Matrix",
+            "TestMatrices/Empty4.mtx",
+            "Edge case with zero edges. Verifies CSR read/store with no elements, isomorphism after optimize, and global minimum feedback loops of 0."
+        ));
+        tests.add(new TestCase(
+            "Simple DAG Chain",
+            "TestMatrices/Chain4.mtx",
+            "Acyclic graph (1->2->3->4). Verifies optimization keeps graph isomorphic and reaches global minimum feedback loops (0 for DAG)."
+        ));
+        tests.add(new TestCase(
+            "Single SCC Cycle",
+            "TestMatrices/Cycle3.mtx",
+            "Single strongly connected cycle of size 3. Verifies SCC handling and that optimized order attains globally minimal unavoidable feedback loops."
+        ));
+        tests.add(new TestCase(
+            "Two SCCs With Bridge",
+            "TestMatrices/TwoSCC4.mtx",
+            "Two separate SCCs linked by one cross edge. Verifies SCC condensation ordering and global minimum feedback loops across all permutations."
+        ));
+        tests.add(new TestCase(
+            "Trailing Empty Rows",
+            "TestMatrices/SparseTrailingRows6.mtx",
+            "Matrix with edges only in early rows and empty rows at the end. Verifies CSR rowPointer correctness, isomorphism, and optimal feedback loop count."
+        ));
+        tests.add(new TestCase(
+            "Self Loops And Sparse Edges",
+            "TestMatrices/SelfLoops5.mtx",
+            "Includes diagonal self-loops and sparse forward edges. Verifies that optimization preserves structure and still minimizes feedback loops globally."
+        ));
+    }
+
+    private static void addGeneratedTests(List<TestCase> tests) {
+        String[] patterns = new String[] {
+            "Empty",
+            "Chain",
+            "Cycle",
+            "StarOut",
+            "StarIn",
+            "BiChain",
+            "TwoSCCBridge",
+            "SelfLoops",
+            "UpperTriDense",
+            "LowerTriDense"
+        };
+
+        for (int n = 4; n <= 8; n++) {
+            for (String pattern : patterns) {
+                tests.add(new TestCase(
+                    "Generated " + pattern + " (n=" + n + ")",
+                    "TestMatrices/Gen_" + pattern + "_" + n + ".mtx",
+                    generatedDescription(pattern, n)
+                ));
+            }
+        }
+    }
+
+    private static String generatedDescription(String pattern, int n) {
+        if ("Empty".equals(pattern)) {
+            return "Generated empty graph on " + n + " nodes. Tests no-edge CSR handling and confirms minimum feedback loops is zero.";
+        }
+        if ("Chain".equals(pattern)) {
+            return "Generated directed chain on " + n + " nodes. Tests acyclic ordering and verifies isomorphism plus zero minimum feedback loops.";
+        }
+        if ("Cycle".equals(pattern)) {
+            return "Generated single directed cycle on " + n + " nodes. Tests SCC traversal and verifies globally minimal unavoidable feedback loops.";
+        }
+        if ("StarOut".equals(pattern)) {
+            return "Generated outward star on " + n + " nodes. Tests high out-degree center node and preservation of graph structure after optimization.";
+        }
+        if ("StarIn".equals(pattern)) {
+            return "Generated inward star on " + n + " nodes. Tests high in-degree center node and verifies global feedback-loop minimization.";
+        }
+        if ("BiChain".equals(pattern)) {
+            return "Generated bidirectional chain on " + n + " nodes. Tests many 2-cycles and SCC behavior with symmetric local dependencies.";
+        }
+        if ("TwoSCCBridge".equals(pattern)) {
+            return "Generated two SCCs connected by one bridge on " + n + " nodes. Tests SCC condensation ordering and inter-component edge direction.";
+        }
+        if ("SelfLoops".equals(pattern)) {
+            return "Generated self-loops on all " + n + " nodes. Tests diagonal handling and verifies node relabeling remains isomorphic.";
+        }
+        if ("UpperTriDense".equals(pattern)) {
+            return "Generated dense upper-triangular DAG on " + n + " nodes. Tests dense acyclic case with many forward dependencies.";
+        }
+        if ("LowerTriDense".equals(pattern)) {
+            return "Generated dense lower-triangular graph on " + n + " nodes. Tests reverse ordering pressure and exact global feedback minimization.";
+        }
+
+        return "Generated test case on " + n + " nodes.";
     }
 
     private static void runTest(TestCase testCase) throws IOException {
