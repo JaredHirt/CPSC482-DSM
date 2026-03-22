@@ -1,15 +1,21 @@
+package DSM;
 /**
  * A class representing a sparse matrix, which is a matrix that contains mostly zero values.
  * This class stores a binary Sparse matrix (values are either 0 or 1) in CRS format.
  * 
  */
-package DSM;
+
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Stack;
+import java.util.Queue;
+import java.util.LinkedList;
 
 public class SparseMatrix {
     private int[] rowPointer;
@@ -60,6 +66,7 @@ public class SparseMatrix {
             int row = Integer.parseInt(data[0]);
             int col = Integer.parseInt(data[1]);
             int ele = Integer.parseInt(data[2]);
+            assert row == col : "Matrix is not square, cannot be a DSM";
             sm = new SparseMatrix(row, col, ele);
 
             // start reading elements in
@@ -174,10 +181,101 @@ public class SparseMatrix {
      */
     public void reduceFeedback(){
         //Get the transpose of the matrix
+        SparseMatrix transposed = this.transpose();
         //Perform DFS on the original matrix putting the equivalent nodes of the transposed matrix into a stack
-        //Perform DFS on the transposed matrix, popping nodes from the stack and notating SCCs
-        //Put the SCCs into order and rearange the original matrix accordingly
+
+
+
+        //First we instantiate all of the nodes
+        Node[] nodes = new Node[this.rows];
+        for (int i=0; i<this.rows; i++) {
+            nodes[i] = new Node(i);
+        }
+
+
+
+        //Now we created a stack of nodes. This will correctly order them by finish time.
+        Stack nodeStack = new Stack<Node>();
+
+        //Perform DFS on the original matrix. Once a node is finished, push it onto the stack
+        
+        for (Node node : nodes) {
+            if (!node.visited) {
+                dfs(node, this, nodes, nodeStack);
+            }
+        }
+        //Perform DFS on the transposed matrix in stack order. Every node which is visited is part of a SCC and we can order them as such.
+        ArrayList<Node> nodeOrder = new ArrayList<Node>(this.rows);
+        while (!nodeStack.isEmpty()) {
+            reorderSCC( (Node) nodeStack.pop(), transposed, nodes, nodeOrder);
+        }
+
+        //We now have an arraylist of nodes optimized for the number of feedback loops.
+        //We can now create a map of the old index to the new index for each node. This will be used to reorder the matrix.
+        int[] indexMap = new int[this.rows];
+        for (int i=0; i<nodeOrder.size(); i++) {
+            indexMap[nodeOrder.get(i).index] = i;
+        }
+        //We now must replace the existing ordering of elements in the matrix with the new ordering. We do this by recreating the matrix internally. Multiplication is far too expensive so we essentially create a new matrix.
+        int[] newColumnIndex = new int[this.elements];
+        int[] newRowPointer = new int[this.rows + 1];
+
+        //Going through all the nodes in the new order and setting up newRowPointer
+
+        for(int i = 0; i < nodeOrder.size(); i++) {
+            Node node = nodeOrder.get(i);
+            //Setting new Row Pointer
+            if(i == 0) {
+                //First row always starts at 0
+                newRowPointer[i] = 0;
+            } else {
+            //Adding the number of elements in the row to the previous row pointer to get the new row pointer
+            newRowPointer[i] = newRowPointer[i-1] + (rowPointer[node.index + 1] - rowPointer[node.index]);
+            }
+        }
+        //Now we have the new row pointers, we can set up the new column index by going through each node in the new order and adding its column index to the new column index array.
+        for(int i = 0; i < nodeOrder.size(); i++) {
+            Node node = nodeOrder.get(i);
+            for(int j = rowPointer[node.index]; j < rowPointer[node.index + 1]; j++) {
+                newColumnIndex[newRowPointer[i] + (j - rowPointer[node.index])] = indexMap[columnIndex[j]];
+            }
+        }
+
         //This will result with the DSM being optimized for the number of feed back loops
+    }
+
+    /**
+     * DFS which puts the finished node onto the stack that is passed. This is topologically sorted.
+     */
+    private void dfs(Node node, SparseMatrix matrix, Node[] nodes, Stack<Node> nodeStack){
+        //Base case if already visited
+        if (node.visited) return;
+        //Mark as visited
+        node.visited = true;
+        //Call dfs on all its neighbors
+        for (int i = matrix.rowPointer[node.index]; i < matrix.rowPointer[node.index+1]; i++) {
+            dfs(nodes[matrix.columnIndex[i]], matrix, nodes, nodeStack);
+        }
+        //Now the node is finished being visited. We push the node onto the stack.
+        nodeStack.push(node);
+    }
+
+    /**
+     * Performs DFS on the transposed matrix in stack order. Every node which is visited is part of a SCC and we can order them as such.
+     * This will result with the DSM being optimized for the number of feed back loops
+     * This takes advantage of the fact that every node is marked as visited from the first DFS. This means we can mark flip the boolean upon finishing it which will mark all nodes as unvisited again.
+     */
+    private void reorderSCC(Node node, SparseMatrix tranSparseMatrix, Node[] nodes, ArrayList<Node> nodeOrder){
+        //Base case if visited by DFS but not reorderSCC
+        if (!node.visited) return;
+        //Mark as unvisited to mark that we have visited it in this DFS
+        node.visited = false;
+        //Call dfs on all its neighbors
+        for (int i = tranSparseMatrix.rowPointer[node.index]; i < tranSparseMatrix.rowPointer[node.index+1]; i++) {
+            reorderSCC(nodes[tranSparseMatrix.columnIndex[i]], tranSparseMatrix, nodes, nodeOrder);
+        }
+        //Now the node is finished being visited. We add the node to the end of the new order.
+        nodeOrder.add(node);
     }
 
     /**
@@ -191,4 +289,16 @@ public class SparseMatrix {
         //This allows us to use gradient descent to optimize the order of elements in the list.
         //This is done relative to a loss function that we define. This will be (large number * num_feedback_loops) + distance_from_diagonal
     }
+
+        class Node {
+        int index;
+        boolean visited;
+
+        public Node(int index) {
+            this.index = index;
+            this.visited = false;
+        }
+    }
+    
+    
 }
