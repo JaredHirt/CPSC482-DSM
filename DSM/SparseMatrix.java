@@ -9,6 +9,7 @@ package DSM;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -42,24 +43,30 @@ public class SparseMatrix {
             System.out.println("Couldn't find the file");
             System.exit(1);
         }
-        // so we can operate on the basis of lines
-        int lineIndex = 0;
         SparseMatrix sm;
         try (BufferedReader br = new BufferedReader(fr)) {
 
             // get past all the comments
-            String line = "";
-            boolean flag = false;
+            String line;
 
-            // skip all commented lines
-            while (flag == false){
-                line = br.readLine().trim();
-                if (!line.matches(".*%.*")) flag = true;
+            // Skip comments/blank lines and stop at the size line.
+            while (true) {
+                line = br.readLine();
+                if (line == null) {
+                    throw new IOException("Unexpected end of file before matrix size line.");
+                }
+                line = line.trim();
+                if (!line.isEmpty() && !line.startsWith("%")) {
+                    break;
+                }
             }
 
             // should be on size line now
             // read size and elements
-            String[] data = line.split(" ");
+            String[] data = line.split("\\s+");
+            if (data.length < 3) {
+                throw new IOException("Invalid Matrix Market size line: " + line);
+            }
             int row = Integer.parseInt(data[0]);
             int col = Integer.parseInt(data[1]);
             int ele = Integer.parseInt(data[2]);
@@ -69,22 +76,41 @@ public class SparseMatrix {
             // start reading elements in
             int[][] allElements = new int[ele][2];
             int allElementIndex = 0;
-            line = br.readLine().trim();
-            // should be on first line of elements now
-            while (line != null) {
-                if (line == null) break;
-                if (line.matches("%.*")) {line = br.readLine(); continue;}
-                data = line.split(" ");
+            // read all non-zero entries
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("%")) {
+                    continue;
+                }
+
+                data = line.split("\\s+");
+                if (data.length < 2) {
+                    throw new IOException("Invalid element line: " + line);
+                }
+
+                int r = Integer.parseInt(data[0]);
+                int c = Integer.parseInt(data[1]);
+
+                if (r < 1 || r > row || c < 1 || c > col) {
+                    throw new IOException("Element index out of bounds: (" + r + ", " + c + ")");
+                }
+                if (allElementIndex >= ele) {
+                    throw new IOException("More elements than declared in header: " + ele);
+                }
+
                 allElements[allElementIndex++] = new int[]{
-                    Integer.parseInt(data[0]), 
-                    Integer.parseInt(data[1])
+                    r,
+                    c
                 };
-                line = br.readLine();
-                if (line != null) line = line.trim();
             }
+
+            if (allElementIndex != ele) {
+                throw new IOException("Element count mismatch. Expected " + ele + " but read " + allElementIndex);
+            }
+
             // TODO: change the sorting method if Dr. Hossain doesnt like us doing this
             // sort to ease the process of putting in row-major form
-            Arrays.sort(allElements, Comparator.comparing(x -> x[0]));
+            Arrays.sort(allElements, Comparator.comparingInt((int[] x) -> x[0]).thenComparingInt(x -> x[1]));
 
             // add to matrix
             int i = 0;
@@ -98,7 +124,9 @@ public class SparseMatrix {
                     sm.rowPointer[j] = i;
                 i++;
             }
-            sm.rowPointer[row] = ele;
+            // Fill all remaining rows so trailing empty rows are represented correctly in CSR.
+            for (; j <= row; j++)
+                sm.rowPointer[j] = ele;
         }
 
         return sm;
@@ -159,7 +187,8 @@ public class SparseMatrix {
                 sm.rowPointer[j] = i;
             i++;
         }
-        sm.rowPointer[sm.rows] = transposedStorage.length;
+        for (; j <= sm.rows; j++)
+            sm.rowPointer[j] = transposedStorage.length;
 
         return sm;
     }
@@ -230,6 +259,7 @@ public class SparseMatrix {
             newRowPointer[i] = newRowPointer[i-1] + (rowPointer[node.index + 1] - rowPointer[node.index]);
             }
         }
+        newRowPointer[nodeOrder.size()] = this.elements; //Last row pointer is always the number of elements
         //Now we have the new row pointers, we can set up the new column index by going through each node in the new order and adding its column index to the new column index array.
         for(int i = 0; i < nodeOrder.size(); i++) {
             Node node = nodeOrder.get(i);

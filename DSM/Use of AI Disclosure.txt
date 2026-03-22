@@ -1,0 +1,74 @@
+AI was used somewhat in this project. Below is an extensive disclosure of all uses of AI.
+
+1.
+After Kosaraju's algorithm was implemented, the following prompt was ran through Github Copilot:
+"Can you look through the program and look for the correctness of what has been implemented so far. Currently we should be able to read a matrix in CSR, store it in CSR, transpose it, reorder them in SCCs such that theoretically the number of feedback loops is globally minimized."
+This used GPT-5.3-Codex • 0.9x to analyze the Code
+
+It then responded with:
+---------------------------------------------------------------------------------------------------------------------
+I'll perform a careful review of the code for correctness in reading CSR format, storing it, transposing, and reordering by SCCs. 
+
+Created 4 todos
+
+Let me create a detailed code review analysis: 
+
+Created memory file [](file:///c%3A/Users/jared/AppData/Roaming/Code/User/workspaceStorage/0f845c85e2dd3a757b6e368a56d523d9/GitHub.copilot-chat/memory-tool/memories/YWE2ZDkyM2ItMTJiOC00MTJiLWExZTYtYjVmYTNiNjFmMzU4/code_review.md)
+
+Completed: *Review readFile() CSR parsing logic* (1/4)
+
+## Code Review Summary
+
+I've completed a thorough review of your DSM implementation. Here are the key findings:
+
+### **Critical Issues Found** ⚠️
+
+**1. Empty Final Rows Not Handled Correctly** (HIGH severity)
+In both `readFile()` and `transpose()`, if the last matrix element is not in the final row, the remaining rows don't get initialized properly:
+```java
+for (; j<element[0]; j++)
+    sm.rowPointer[j] = i;  // Stops at last element's row
+// Missing: should fill remaining rows
+sm.rowPointer[row] = ele;  // Only sets the very last entry
+```
+If elements end at row 500 but matrix has 600 rows, then `rowPointer[501..599]` remain as zeros instead of pointing to the total element count. This violates CSR format where empty rows at the end must have `rowPointer[i] = total_elements`.
+
+**Fix**: After the loop, add this:
+```java
+for (; j <= row; j++)
+    sm.rowPointer[j] = ele;
+```
+
+**2. No Bounds Validation on MTX Data** (MEDIUM severity)
+The code doesn't validate that row/column indices in the MTX file are within [1, N]. Invalid indices could cause array out-of-bounds errors during the CSR construction loop.
+
+**3. Unsorted Columns Within Rows** (LOW severity)  
+Elements are sorted by row only, not by column within each row. Standard CSR requires `columnIndex` to be sorted within each row. This doesn't break your DFS/SCC algorithms (they're order-independent), but it deviates from CSR conventions.
+
+---
+
+### **What's Correct** ✓
+
+**transpose()** algorithm is sound:
+- Correctly converts CSR → expanded storage → transposed CSR
+- Element counting and position calculation for transpose is correct
+- The double index conversion (1-indexed ↔ 0-indexed) works algebraically
+
+**reduceFeedback()** Kosaraju's algorithm is correct:
+- First DFS produces correct topological order
+- Second DFS on transposed matrix correctly identifies SCCs
+- Matrix reordering using `indexMap` is correct
+- Handles isolated nodes (degree 0) properly
+
+---
+
+### **Recommendations**
+
+1. **Fix the empty rows bug immediately**—it will cause issues when CA.mtx has trailing empty rows
+2. Add input validation for MTX row/column bounds
+3. Optionally: Sort by (row, column) instead of just row for proper CSR format
+4. **Test with a matrix that has trailing empty rows** to verify the fix
+
+Would you like me to implement these fixes?
+---------------------------------------------------------------------------------------------------------------------
+This was outputted by Claude Haiku 4.5 • 0.3x
