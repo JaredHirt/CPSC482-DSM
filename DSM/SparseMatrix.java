@@ -236,6 +236,13 @@ public class SparseMatrix {
             reorderSCC( (Node) nodeStack.pop(), transposed, nodes, nodeOrder);
         }
 
+        // Reverse SCC order so inter-SCC edges tend to fall below the diagonal (fewer col > row entries).
+        for (int left = 0, right = nodeOrder.size() - 1; left < right; left++, right--) {
+            Node tmp = nodeOrder.get(left);
+            nodeOrder.set(left, nodeOrder.get(right));
+            nodeOrder.set(right, tmp);
+        }
+
         //We now have an arraylist of nodes optimized for the number of feedback loops.
         //We can now create a map of the old index to the new index for each node. This will be used to reorder the matrix.
         int[] indexMap = new int[this.rows];
@@ -310,6 +317,117 @@ public class SparseMatrix {
         //We keep the 5 best nodes and create 100 children by randomly swapping between 1-5 pairs of nodes in the parent.
         //We repeat until there is no improvement for 100 generations.
         // The time complexity per iteration is O(pop_size * (fitness + mutation)), where fitness is O(elements) and mutation is O(rows).
+
+        // Create array of potential solutions.
+        int[][] population = new int[105][this.rows];
+
+        //For initial population we create 105 copies of the current matrix. With every solution but solution 0 having between 1-5 swaps.
+        population[0] = new int[this.rows];
+
+        //Copy of the current solution
+        for(int i = 0; i < this.rows; i++){
+            population[0][i] = i;
+        }
+
+        //Create the rest of the population with random swap mutations
+        for(int i = 1; i < population.length; i++){
+            population[i] = Arrays.copyOf(population[0], this.rows);
+            int swaps = (int) (Math.random() * 5) + 1;
+            for(int j = 0; j < swaps; j++){
+                int index1 = (int) (Math.random() * this.rows);
+                int index2 = (int) (Math.random() * this.rows);
+                // swap
+                int temp = population[i][index1];
+                population[i][index1] = population[i][index2];
+                population[i][index2] = temp;
+            }
+        }
+
+
+        //Now that we have initialized our population, we can loop until we have no improvement for 100 generations. We will keep track of the best solution and its loss to determine when to stop.
+        int[] bestSolution = Arrays.copyOf(population[0], this.rows);
+        // Evaluate initial solution
+        long bestLoss = reorderMatrix(population[0]).calculateLoss();
+        int generationsWithoutImprovement = 0;
+        while (generationsWithoutImprovement < 100) {
+            //Calculate the loss for each solution and track the 5 best in O(1) per solution.
+            long[] best5Losses = new long[5];
+            int[] best5Indices = new int[5];
+            long worstOf5 = Long.MAX_VALUE;
+            int worstOf5Slot = 0;
+
+            // Initialize best5 with max values
+            for(int i = 0; i < 5; i++){
+                best5Losses[i] = Long.MAX_VALUE;
+                best5Indices[i] = -1;
+            }
+
+            // Track best 5 as we evaluate population
+            for(int i = 0; i < population.length; i++){
+                long loss = reorderMatrix(population[i]).calculateLoss();
+
+                // If this loss is better than the worst of the top 5, insert it
+                if(loss < worstOf5){
+                    best5Losses[worstOf5Slot] = loss;
+                    best5Indices[worstOf5Slot] = i;
+
+                    // Recompute worst of 5 for next iteration
+                    worstOf5 = best5Losses[0];
+                    worstOf5Slot = 0;
+                    for(int j = 1; j < 5; j++){
+                        if(best5Losses[j] > worstOf5){
+                            worstOf5 = best5Losses[j];
+                            worstOf5Slot = j;
+                        }
+                    }
+                }
+            }
+
+            //Keep the 5 best solutions and create 100 children by randomly swapping between 1-5 pairs of nodes in the parent.
+            int[][] newPopulation = new int[population.length][this.rows];
+            for(int i = 0; i < 5; i++){
+                newPopulation[i] = Arrays.copyOf(population[best5Indices[i]], this.rows);
+            }
+            for(int i = 5; i < population.length; i++){
+                newPopulation[i] = Arrays.copyOf(population[best5Indices[i % 5]], this.rows);
+                int swaps = (int) (Math.random() * 5) + 1;
+                for(int j = 0; j < swaps; j++){
+                    int index1 = (int) (Math.random() * this.rows);
+                    int index2 = (int) (Math.random() * this.rows);
+                    // swap
+                    int temp = newPopulation[i][index1];
+                    newPopulation[i][index1] = newPopulation[i][index2];
+                    newPopulation[i][index2] = temp;
+                }
+            }
+            //Check if we have a new best solution. If so, reset generations without improvement. If not, increment it.
+            long bestOfGeneration = best5Losses[0];
+            for(int i = 1; i < 5; i++){
+                if(best5Losses[i] < bestOfGeneration){
+                    bestOfGeneration = best5Losses[i];
+                }
+            }
+            if (bestOfGeneration < bestLoss) {
+                bestLoss = bestOfGeneration;
+                int bestIdx = 0;
+                for(int i = 1; i < 5; i++){
+                    if(best5Losses[i] < best5Losses[bestIdx]){
+                        bestIdx = i;
+                    }
+                }
+                bestSolution = Arrays.copyOf(population[best5Indices[bestIdx]], this.rows);
+                generationsWithoutImprovement = 0;
+            } else {
+                generationsWithoutImprovement++;
+            }
+
+            population = newPopulation;
+        }
+
+        //Now we have the best solution we found. We can reorder the matrix to this solution.
+        SparseMatrix optimized = reorderMatrix(bestSolution);
+        this.columnIndex = optimized.columnIndex;
+        this.rowPointer = optimized.rowPointer;
     }
 
 

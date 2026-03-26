@@ -195,7 +195,7 @@ class Test {
 
         for (int row = 0; row < n; row++) {
             for (int col = 0; col < n; col++) {
-                if (adj[row][col] && col < row) {
+                if (adj[row][col] && col > row) {
                     count++;
                 }
             }
@@ -228,7 +228,7 @@ class Test {
             for (int[] edge : edges) {
                 int source = edge[0];
                 int target = edge[1];
-                if (permutation[target] < permutation[source]) {
+                if (permutation[target] > permutation[source]) {
                     feedbackCount++;
                 }
             }
