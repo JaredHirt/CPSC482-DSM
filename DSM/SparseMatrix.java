@@ -305,12 +305,74 @@ public class SparseMatrix {
      */
     public void minimizeDistanceFromDiagonal(){
         //Work now needs to be performed on reducing the distance of feedback loops from the main diagonal. 
-        //The perfect solution for this is exponential, but we will perform an approximate solution by using Neural sort.
-        //Neural sort is a differentiable sorting algorithm that can be used to optimize the order of elements in a list.
-        //This is done by relaxing the constraint of elements being in a specific order and instead allowing them to be in a continuous space.
-        //This allows us to use gradient descent to optimize the order of elements in the list.
-        //This is done relative to a loss function that we define. This will be (large number * num_feedback_loops) + distance_from_diagonal
+        //The perfect solution for this is exponential, but we will perform an approximate solution by using a standard genetic algorithm.
+        //population of 105, we initialize it with copies of the current matrix with all but one having between 1-5 nodes swapped.
+        //We keep the 5 best nodes and create 100 children by randomly swapping between 1-5 pairs of nodes in the parent.
+        //We repeat until there is no improvement for 100 generations.
+        // The time complexity per iteration is O(pop_size * (fitness + mutation)), where fitness is O(elements) and mutation is O(rows).
     }
+
+
+    /**
+     * Gives a sparse matrix based on a new ordering of the nodes.
+     * newOrder is an array of the new order. A 3 at index 0 means that the node at index 0 should go to index 3 in the new matrix.
+     */
+    private SparseMatrix reorderMatrix(int[] newOrder) {
+        // Note that newOrder is essentially a map old index -> new index.
+
+        // Create a new sparse matrix that is a copy of the current one.
+        SparseMatrix sm = new SparseMatrix(this.rows, this.columns, this.elements);
+        //Generate the new column and row pointer arrays.
+        int[] newColumnIndex = new int[this.elements];
+        int[] newRowPointer = new int[this.rows + 1];
+
+        // go throught the row pointer array and put the number of elements per row
+        for (int i = 0; i < this.rows; i++) {
+            int newRowIndex = newOrder[i];
+            int rowLength = rowPointer[i + 1] - rowPointer[i];
+            newRowPointer[newRowIndex + 1] = rowLength;
+        }
+        //Do another pass to put the exact start and end of each row in the new row pointer array
+        for (int i = 1; i < newRowPointer.length; i++) {
+            newRowPointer[i] += newRowPointer[i - 1];
+        }
+
+        //Now that we have the row pointers, we can add the columns in the new order.
+        for (int i = 0; i < this.rows; i++) {
+            int newRowIndex = newOrder[i];
+            for (int j = rowPointer[i]; j < rowPointer[i + 1]; j++) {
+                int col = columnIndex[j];
+                int newColIndex = newOrder[col];
+                newColumnIndex[newRowPointer[newRowIndex] + (j - rowPointer[i])] = newColIndex;
+            }
+        }
+
+        sm.columnIndex = newColumnIndex;
+        sm.rowPointer = newRowPointer;
+        return sm;
+    }
+
+    /**
+     * Calculate the loss function for a matrix
+     */
+    private long calculateLoss() {
+        // The loss function is num_feedback_loops * num_rows^2 + sum_distance_from_diagonal
+        // Using this we can support matrices up to the max int number of rows with sufficient penalty for adding additional feedback loops.
+        long loss = 0;
+        // Calculate the number of feedback loops and the distance from the diagonal for each element.
+        for (int row = 0; row < this.rows; row++) {
+            for (int j = rowPointer[row]; j < rowPointer[row + 1]; j++) {
+                int col = columnIndex[j];
+                if (col > row) {
+                    loss += (long) this.rows * this.rows;
+                    loss += (col - row);
+                }
+            }
+        }
+        return loss;
+    }
+
+
 
         class Node {
         int index;
