@@ -1,0 +1,49 @@
+Matrix: TestMatrices/California.mtx
+Loss after SCC ordering: 22040724256
+Final loss after full optimization: 19332353590
+Loss difference (SCC - final): 2708370666
+----------------------------------------
+Matrix: TestMatrices/EPA.mtx
+Loss after SCC ordering: 1525723107
+Final loss after full optimization: 1411876682
+Loss difference (SCC - final): 113846425
+----------------------------------------
+Matrix: TestMatrices/EVA.mtx
+Loss after SCC ordering: 1082985156
+Final loss after full optimization: 1010792708
+Loss difference (SCC - final): 72192448
+----------------------------------------
+Matrix: TestMatrices/GD98_a.mtx
+Loss after SCC ordering: 5782
+Final loss after full optimization: 5782
+Loss difference (SCC - final): 0
+----------------------------------------
+Matrix: TestMatrices/GD99_c.mtx
+Loss after SCC ordering: 374950
+Final loss after full optimization: 341863
+Loss difference (SCC - final): 33087
+----------------------------------------
+Matrix: TestMatrices/GlossGT.mtx
+Loss after SCC ordering: 20740
+Final loss after full optimization: 20740
+Loss difference (SCC - final): 0
+----------------------------------------
+Matrix: TestMatrices/HEP-th-new.mtx
+Loss after SCC ordering: 4623974509614
+Final loss after full optimization: 1734371533328
+Loss difference (SCC - final): 2889602976286
+----------------------------------------
+Matrix: TestMatrices/HEP-th.mtx
+Loss after SCC ordering: 4443223190000
+Final loss after full optimization: 1578275015419
+Loss difference (SCC - final): 2864948174581
+----------------------------------------
+Matrix: TestMatrices/Tina_AskCal.mtx
+Loss after SCC ordering: 1486
+Final loss after full optimization: 491
+Loss difference (SCC - final): 995
+----------------------------------------
+Matrix: TestMatrices/wb-cs-stanford.mtx
+Loss after SCC ordering: 1067893462107
+Final loss after full optimization: 827286320260
+Loss difference (SCC - final): 240607141847

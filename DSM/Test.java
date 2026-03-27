@@ -146,10 +146,14 @@ class Test {
         System.out.println("Description: " + testCase.description);
 
         SparseMatrix original = SparseMatrix.readFile(testCase.filePath);
+        SparseMatrix sccOnly = SparseMatrix.readFile(testCase.filePath);
         SparseMatrix optimized = SparseMatrix.readFile(testCase.filePath);
+
+        sccOnly.reduceFeedback();
         optimized.optimizeDSM();
 
         boolean[][] originalAdj = toAdjacencyMatrix(original);
+        boolean[][] sccOnlyAdj = toAdjacencyMatrix(sccOnly);
         boolean[][] optimizedAdj = toAdjacencyMatrix(optimized);
 
         boolean isomorphic = areIsomorphic(originalAdj, optimizedAdj);
@@ -161,6 +165,9 @@ class Test {
 
         int optimizedFeedbackLoops = countFeedbackLoops(optimizedAdj);
         int globalMinimumFeedbackLoops = computeGlobalMinimumFeedbackLoops(originalAdj);
+        long sccOnlyLoss = sccOnly.calculateLoss();
+        long finalLoss = optimized.calculateLoss();
+        long lossDifference = sccOnlyLoss - finalLoss;
 
         assertCondition(
             optimizedFeedbackLoops == globalMinimumFeedbackLoops,
@@ -173,6 +180,9 @@ class Test {
         System.out.println("Result: PASS");
         System.out.println("Optimized feedback loops: " + optimizedFeedbackLoops);
         System.out.println("Global minimum feedback loops: " + globalMinimumFeedbackLoops);
+        System.out.println("Loss after SCC ordering: " + sccOnlyLoss);
+        System.out.println("Final loss after full optimization: " + finalLoss);
+        System.out.println("Loss difference (SCC - final): " + lossDifference);
     }
 
     private static boolean[][] toAdjacencyMatrix(SparseMatrix matrix) {

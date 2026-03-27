@@ -473,7 +473,7 @@ public class SparseMatrix {
     /**
      * Calculate the loss function for a matrix
      */
-    private long calculateLoss() {
+    public long calculateLoss() {
         // The loss function is num_feedback_loops * num_rows^2 + sum_distance_from_diagonal
         // Using this we can support matrices up to the max int number of rows with sufficient penalty for adding additional feedback loops.
         long loss = 0;
