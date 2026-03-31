@@ -18,6 +18,7 @@ import java.util.Stack;
 public class SparseMatrix {
     private int[] rowPointer;
     private int[] columnIndex;
+    private char[] columnConfiguration;
 
     private int columns;
     private int rows;
@@ -30,6 +31,11 @@ public class SparseMatrix {
         this.columns = columns;
         this.rows = rows;
         this.elements = elements;
+        this.columnConfiguration = new char[rows];
+        for (int i=0; i<rows; i++) {
+            char c = (char)(i+65);
+            columnConfiguration[i] = c;
+        }
     }
 
 
@@ -134,6 +140,7 @@ public class SparseMatrix {
 
     public int[] getColumnIndex() { return columnIndex; }
     public int[] getRowPointer() { return rowPointer; }
+    public char[] getColumnConfiguration() { return columnConfiguration; }
 
     /**
      * Transposes
@@ -246,8 +253,10 @@ public class SparseMatrix {
         //We now have an arraylist of nodes optimized for the number of feedback loops.
         //We can now create a map of the old index to the new index for each node. This will be used to reorder the matrix.
         int[] indexMap = new int[this.rows];
+        char[] newColumnConfiguration = new char[this.rows];
         for (int i=0; i<nodeOrder.size(); i++) {
             indexMap[nodeOrder.get(i).index] = i;
+            newColumnConfiguration[nodeOrder.get(i).index] = columnConfiguration[i];
         }
         //We now must replace the existing ordering of elements in the matrix with the new ordering. We do this by recreating the matrix internally. Multiplication is far too expensive so we essentially create a new matrix.
         int[] newColumnIndex = new int[this.elements];
@@ -271,6 +280,7 @@ public class SparseMatrix {
         //This will result with the DSM being optimized for the number of feed back loops
         this.columnIndex = newColumnIndex;
         this.rowPointer = newRowPointer;
+        this.columnConfiguration = newColumnConfiguration;
     }
 
     /**
@@ -428,6 +438,7 @@ public class SparseMatrix {
         SparseMatrix optimized = reorderMatrix(bestSolution);
         this.columnIndex = optimized.columnIndex;
         this.rowPointer = optimized.rowPointer;
+        this.columnConfiguration = optimized.columnConfiguration;
     }
 
 
@@ -440,6 +451,9 @@ public class SparseMatrix {
 
         // Create a new sparse matrix that is a copy of the current one.
         SparseMatrix sm = new SparseMatrix(this.rows, this.columns, this.elements);
+        for (int i=0; i<newOrder.length; i++) {
+            sm.columnConfiguration[i] = (char)(newOrder[i] + 65);
+        }
         //Generate the new column and row pointer arrays.
         int[] newColumnIndex = new int[this.elements];
         int[] newRowPointer = new int[this.rows + 1];
@@ -500,6 +514,33 @@ public class SparseMatrix {
             this.index = index;
             this.visited = false;
         }
+    }
+
+    /** print a function that can be copied into Racket to show the matrix
+     *  this probably wont be in the final version but it might
+     */
+    public void printRacketFunction() {
+        System.out.print("(matrix-show \n\"");
+        for (char c : columnConfiguration) System.out.print(c);
+        System.out.println("\"");
+
+        // print each line with dots
+        // first make boolean array
+        boolean[][] toPrint = new boolean[rows][columns];
+        int j = 0; // the index of the row pointer
+        for (int i=0; i<elements; i++) {
+            if (rowPointer[j+1] <= i) j++;
+            toPrint[j][columnIndex[i]] = true;
+        }
+
+        for (boolean[] i : toPrint) {
+            System.out.print("\"");
+            for (boolean k : i) {
+                System.out.print(k ? "." : " ");
+            }
+            System.out.println("\"");
+        }
+        System.out.println(")");
     }
     
     
